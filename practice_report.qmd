@@ -6,7 +6,7 @@ format:
     embed-resources: true
 ---
 
-## Welcome to your practice report
+## "Welcome to your practice report"
 
 This is a **Quarto** document. It mixes ordinary writing with live code, so your
 report and your analysis always stay in sync. When you click **Render**, Quarto
