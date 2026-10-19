@@ -1,0 +1,10 @@
+check,r_value,python_value,match,note
+total_rows,,,,
+filtered_rows,,,,
+group_labels,"6 groups: 3 IncomeGroup x 2 Gender",,,
+mean_bmi_LowIncome_Female,,,,
+mean_bmi_LowIncome_Male,,,,
+mean_bmi_Middle_Female,,,,
+mean_bmi_Middle_Male,,,,
+mean_bmi_High_Female,,,,
+mean_bmi_High_Male,,,,

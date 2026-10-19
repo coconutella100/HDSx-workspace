@@ -1,0 +1,49 @@
+---
+title: "Assignment 4: Polyglot Parity"
+format: html
+---
+
+## Load data (relative path)
+
+```{r}
+library(dplyr)
+nhanes <- read.csv("../../../examples/nhanes-equity/data/nhanes_equity_v6.csv")
+nrow(nhanes)
+```
+
+## Filter: drop rows missing BMI or IncomeGroup
+
+```{r}
+analytic <- nhanes |> filter(!is.na(BMI), !is.na(IncomeGroup))
+nrow(analytic)
+```
+
+## BMI summary by IncomeGroup and Gender
+
+```{r}
+analytic |>
+  group_by(IncomeGroup, Gender) |>
+  summarise(n = n(), mean_bmi = round(mean(BMI), 2),
+            sd_bmi = round(sd(BMI), 2), median_bmi = round(median(BMI), 2),
+            .groups = "drop") |>
+  arrange(IncomeGroup, Gender)
+```
+
+## Reusable function
+
+```{r}
+summarise_bmi <- function(data) {
+  data |>
+    filter(!is.na(BMI), !is.na(IncomeGroup)) |>
+    group_by(IncomeGroup, Gender) |>
+    summarise(n = n(), mean_bmi = round(mean(BMI), 2),
+              sd_bmi = round(sd(BMI), 2), median_bmi = round(median(BMI), 2),
+              .groups = "drop") |>
+    arrange(IncomeGroup, Gender)
+}
+summarise_bmi(nhanes)
+```
+
+## Parity discussion
+
+Both languages use the same filter (drop missing BMI or IncomeGroup), the same groups, sample SD (n-1), and round to 2 decimals at the end. See parity-table.csv. To render: `quarto render polyglot-parity.qmd` from the submission folder.
