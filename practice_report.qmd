@@ -42,7 +42,11 @@ mean(values)
 
 
 
-## Your turn
+## My Notes
+Learned how to push commit
+Learned how to use Quarto to create a report
+
+Your turn
 
 - Add a sentence here describing what you notice in the chart.
 - Render again and check that both your sentence and the chart appear.
