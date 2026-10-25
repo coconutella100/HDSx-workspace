@@ -34,6 +34,14 @@ hist(patients$age,
      col  = "steelblue")
 ```
 
+```{r}
+values <- c(10, 15, 20, 25)
+mean(values)
+```
+
+
+
+
 ## Your turn
 
 - Add a sentence here describing what you notice in the chart.
