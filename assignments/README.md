@@ -17,3 +17,5 @@ original starter unchanged and place your edited work in that assignment's
 
 Run and render from the repository root. Required rendered artifacts must be
 committed with their source files.
+
+***Confirm this edit in Assignment 3 submission***
