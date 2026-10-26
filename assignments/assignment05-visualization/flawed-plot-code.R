@@ -55,3 +55,4 @@ print(flawed_plot)
 # (run getwd() to see where). Find flawed-plot.png in the Explorer, right-click
 # it, and choose Open Preview.
 ggsave("flawed-plot.png", flawed_plot, width = 7, height = 5)
+
