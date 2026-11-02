@@ -1,0 +1,45 @@
+---
+title: "A6 EDA Note"
+format: html
+---
+
+```{r}
+library(dplyr)
+# Relative path from submission/ to the data
+dat <- read.csv("examples/nhanes-equity/data/nhanes_equity_v6.csv")
+```
+
+## Cohort
+Adults aged 20–80 inclusive. Rows with missing age are excluded.
+
+```{r}
+n_raw <- nrow(dat)
+cohort <- dat |> filter(!is.na(Age), Age >= 20, Age <= 80)
+n_cohort <- nrow(cohort)
+c(raw = n_raw, cohort = n_cohort, excluded = n_raw - n_cohort)
+```
+
+## Missingness (stated before results)
+Summaries use complete cases per variable; counts below.
+
+```{r}
+key <- c("Age", "BMI", "IncomeGroup")
+miss <- data.frame(variable = key,
+  n_missing = sapply(cohort[key], function(x) sum(is.na(x))),
+  pct_missing = round(100 * sapply(cohort[key], function(x) mean(is.na(x))), 1))
+miss
+```
+
+## Table 1 by IncomeGroup
+```{r}
+table1 <- cohort |>
+  group_by(IncomeGroup) |>
+  summarise(N = n(),
+    BMI_mean_sd = sprintf("%.1f (%.1f)", mean(BMI, na.rm = TRUE), sd(BMI, na.rm = TRUE)),
+    Age_mean_sd = sprintf("%.1f (%.1f)", mean(Age, na.rm = TRUE), sd(Age, na.rm = TRUE)))
+write.csv(table1, "table1.csv", row.names = FALSE)
+table1
+```
+
+## Methods note
+This analysis is descriptive and unweighted. It does not use NHANES survey weights, so results describe this classroom snapshot only and are not population estimates. No causal claims are made about income and BMI.
