@@ -1,0 +1,3 @@
+AI was used to generate code for revised plot. The output was verified by checking for errors in code, running code, and ensuring that column names were correct, title, axis labels and cycles in correct order.
+
+checked file to see column names in code chunk match CSV file, checked that colors run from low to high income, and ensured that cycles appear in chronological order. For estimates, compared two cycle's obesity prevalence and checked against NCHS figure

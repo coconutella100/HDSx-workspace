@@ -1,0 +1,186 @@
+---
+title: "Revised NHANES Plot"
+format:
+  html:
+    embed-resources: true
+execute:
+  message: false
+---
+```{r}
+#| label: setup
+#| include: false
+library(readr)
+library(dplyr)
+library(ggplot2)
+library(survey)
+
+options(survey.lonely.psu = "adjust")
+```
+
+```{r}
+#| label: load-data
+candidate_paths <- c(
+  "nhanes_equity_v6.csv",
+  "data/nhanes_equity_v6.csv",
+  "examples/nhanes-equity/data/nhanes_equity_v6.csv",
+  "../../../examples/nhanes-equity/data/nhanes_equity_v6.csv"
+)
+
+data_path <- candidate_paths[file.exists(candidate_paths)][1]
+if (is.na(data_path)) {
+  stop("Could not find nhanes_equity_v6.csv relative to ", getwd())
+}
+
+nhanes_raw <- read_csv(data_path, show_col_types = FALSE)
+```
+
+```{r}
+#| label: config
+outcome    <- "obesity"     # "obesity" (BMI >= 30 prevalence) or "bmi" (mean BMI)
+
+col_age    <- "Age"         # NHANES: RIDAGEYR
+col_weight <- "WTMEC2YR"    # exam weight; 2017-March 2020 uses WTMECPRP
+col_strata <- "SDMVSTRA"
+col_psu    <- "SDMVPSU"
+
+income_levels <- NULL       # e.g. c("Low", "Middle", "High"); NULL = sorted unique
+cycle_levels  <- NULL       # e.g. c("1999-2000", ..., "2017-March 2020")
+
+# 2000 US standard population, adult age groups used by NCHS obesity reports
+std_pop <- c("20-39" = 0.3966, "40-59" = 0.3718, "60+" = 0.2316)
+```
+
+```{r}
+#| label: estimates
+required <- c("Cycle", "IncomeGroup", "BMI", col_age)
+missing_cols <- setdiff(required, names(nhanes_raw))
+if (length(missing_cols) > 0) {
+  stop("Missing required columns: ", paste(missing_cols, collapse = ", "))
+}
+
+has_design <- all(c(col_weight, col_strata, col_psu) %in% names(nhanes_raw))
+if (!has_design) {
+  warning("Survey design columns not found; using UNWEIGHTED, age-standardized estimates.")
+}
+
+if (is.null(cycle_levels))  cycle_levels  <- sort(unique(nhanes_raw$Cycle))
+if (is.null(income_levels)) income_levels <- sort(unique(na.omit(nhanes_raw$IncomeGroup)))
+
+nhanes <- nhanes_raw |>
+  mutate(
+    Age         = .data[[col_age]],
+    Cycle       = factor(Cycle, levels = cycle_levels),
+    IncomeGroup = factor(IncomeGroup, levels = income_levels, ordered = TRUE),
+    AgeGroup    = cut(Age, breaks = c(20, 40, 60, Inf), right = FALSE,
+                      labels = names(std_pop)),
+    Obese       = as.numeric(BMI >= 30),
+    in_analysis = !is.na(Age) & Age >= 20 & !is.na(BMI) &
+                  !is.na(IncomeGroup) & !is.na(Cycle)
+  )
+
+value_var <- if (outcome == "obesity") "Obese" else "BMI"
+
+if (has_design) {
+  design_data <- nhanes |>
+    filter(!is.na(.data[[col_weight]]), .data[[col_weight]] > 0,
+           !is.na(.data[[col_strata]]), !is.na(.data[[col_psu]]))
+
+  des <- svydesign(
+    ids     = as.formula(paste0("~", col_psu)),
+    strata  = as.formula(paste0("~", col_strata)),
+    weights = as.formula(paste0("~", col_weight)),
+    nest    = TRUE,
+    data    = design_data
+  )
+
+  des_std <- svystandardize(
+    subset(des, in_analysis),
+    by = ~AgeGroup, over = ~Cycle + IncomeGroup, population = std_pop
+  )
+
+  est <- svyby(as.formula(paste0("~", value_var)),
+               ~Cycle + IncomeGroup, des_std, svymean, na.rm = TRUE) |>
+    as.data.frame() |>
+    rename(estimate = all_of(value_var))
+
+  method_note <- "Survey-weighted, age-standardized to the 2000 US standard population; bars are 95% CIs."
+} else {
+  est <- nhanes |>
+    filter(in_analysis) |>
+    group_by(Cycle, IncomeGroup, AgeGroup) |>
+    summarise(m = mean(.data[[value_var]]),
+              v = var(.data[[value_var]]) / n(), .groups = "drop") |>
+    mutate(w = std_pop[as.character(AgeGroup)]) |>
+    group_by(Cycle, IncomeGroup) |>
+    summarise(estimate = sum(w * m) / sum(w),
+              se       = sqrt(sum(w^2 * v, na.rm = TRUE)) / sum(w),
+              .groups  = "drop")
+
+  method_note <- "UNWEIGHTED (not nationally representative), age-standardized; bars are approximate 95% CIs."
+}
+
+est <- est |>
+  mutate(lower = estimate - 1.96 * se, upper = estimate + 1.96 * se)
+
+if (outcome == "obesity") {
+  est <- est |> mutate(lower = pmax(lower, 0), upper = pmin(upper, 1))
+}
+
+period <- paste(range(as.character(levels(droplevels(est$Cycle)))), collapse = " to ")
+```
+
+```{r}
+#| label: fig-revised
+#| fig-cap: "Revised plot: survey-weighted, age-standardized estimates with 95% confidence intervals."
+#| fig-width: 8
+#| fig-height: 5.5
+dodge <- position_dodge(width = 0.4)
+
+y_label <- if (outcome == "obesity") "Obesity prevalence (BMI \u2265 30)" else "Mean BMI (kg/m\u00b2)"
+title   <- if (outcome == "obesity") "Adult obesity prevalence by income group" else "Mean adult BMI by income group"
+
+revised_plot <- ggplot(
+  est,
+  aes(x = Cycle, y = estimate, color = IncomeGroup, group = IncomeGroup)
+) +
+  geom_line(linewidth = 0.8, position = dodge) +
+  geom_errorbar(aes(ymin = lower, ymax = upper), width = 0.15, position = dodge) +
+  geom_point(size = 2.5, position = dodge) +
+  scale_color_viridis_d(option = "plasma", end = 0.85) +
+  labs(
+    title    = title,
+    subtitle = paste0("US adults age 20+, NHANES ", period),
+    x        = "NHANES cycle",
+    y        = y_label,
+    color    = "Income group",
+    caption  = paste(method_note,
+                     "Cross-sectional data: differences are associations, not causal effects.",
+                     sep = "\n")
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    axis.text.x     = element_text(angle = 35, hjust = 1),
+    legend.position = "top",
+    plot.caption    = element_text(hjust = 0, size = 9, color = "grey30")
+  )
+
+if (outcome == "obesity") {
+  revised_plot <- revised_plot +
+    scale_y_continuous(labels = scales::percent_format(accuracy = 1)) +
+    expand_limits(y = 0)
+}
+
+revised_plot
+```
+
+
+
+```{r}
+#| label: export-plot
+#| include: false
+dir.create("assignments/assignment05-visualization/output", recursive = TRUE,
+           showWarnings = FALSE)
+
+ggsave("assignments/assignment05-visualization/output/revised-plot.png", revised_plot,
+       width = 8, height = 5.5, dpi = 300, bg = "white")
+```
