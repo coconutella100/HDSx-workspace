@@ -5,7 +5,7 @@ format:
   revealjs:
     slide-number: true
     embed-resources: true
-bibliography: ../../../references.bib
+bibliography: ../../references.bib
 ---
 
 ## Question And Audience
@@ -19,6 +19,8 @@ bibliography: ../../../references.bib
 ## Evidence
 
 Insert one figure or table from prior work.
+![](../assignment07-dashboard/submission/dashboard-preview.png)
+
 
 State the finding in one sentence.
 
