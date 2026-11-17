@@ -1,0 +1,1 @@
+From the repository root, run `quarto render assignments/assignment07-dashboard/submission/dashboard.qmd`; this relative path rendered successfully on 2026-11-16 with the default `selected_income` value `"Low Income (<1.3)"`, producing `assignments/assignment07-dashboard/submission/dashboard.html`. 
